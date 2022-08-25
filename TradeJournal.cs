@@ -19,6 +19,7 @@ using NinjaTrader.Data;
 using NinjaTrader.NinjaScript;
 using NinjaTrader.Core.FloatingPoint;
 using NinjaTrader.NinjaScript.DrawingTools;
+using System.IO;
 #endregion
 
 //This namespace holds Indicators in this folder and is required. Do not change it. 
@@ -62,10 +63,16 @@ namespace NinjaTrader.NinjaScript.Indicators
 		private string Entry = "Good";
 		private string Management = "Good";
 		private string Qualifier = "HH";
+		
+		/// CSV
+		private bool 	headerIn = false;
+		//private string path = "";
 		/// MARK: - TODO - 
 		/// [ X ] Add Vwap to show VAL, VAH, Up Trend , Down Trend 
-		/// [  ] Add buttons Qualifier HH LL, Entry Good Bad, Management Good Bad
-		/// [  ] Add Save CSV
+		/// [ X ] Add buttons Qualifier HH LL, Entry Good Bad, Management Good Bad
+		/// [   ] Add Save CSV
+		
+		#region Set Up 
 		
 		protected override void OnStateChange()
 		{
@@ -88,11 +95,16 @@ namespace NinjaTrader.NinjaScript.Indicators
 				RTHclose					= DateTime.Parse("15:00", System.Globalization.CultureInfo.InvariantCulture);
 				UsePoints									= true;
 				Contracts									= 5;
+				JournalFileName								= @"TradeJournal.csv";
+				///path										= NinjaTrader.Core.Globals.UserDataDir + JournalFileName;
+				path = "no_path";
+				//C:\Users\trade\OneDrive\Documents\NinjaTrader 8\bin\Custom
 			}
 			else if (State == State.Configure)
 			{
 				startTime = long.Parse(RTHopen.ToString("HHmmss"));
 			 	endTime = long.Parse(RTHclose.ToString("HHmmss"));
+				path = @"C:\Users\trade\OneDrive\Documents\NinjaTrader 8\" + JournalFileName;
 				AddDataSeries(Data.BarsPeriodType.Minute, 1);
 				ClearOutputWindow();
 			}
@@ -189,6 +201,8 @@ namespace NinjaTrader.NinjaScript.Indicators
 			  }
 		}
 		
+		#endregion
+		
 		protected override void OnBarUpdate()
 		{
 			if ( CurrentBar < 5 ) { return; }
@@ -257,12 +271,8 @@ namespace NinjaTrader.NinjaScript.Indicators
 								  } 
 							  }  
 			        } 
-					/// check for new gain
-					if (PriorGain != gain) {
-						// record this trade profit / loss
-						double ThisTradePoints = gain - PriorGain;
-						double ThisTradeProfit = (ThisTradePoints * Contracts) * PointVal; 
-						string NewTrade = Time[0].ToShortDateString() + ", " + Time[0].ToShortTimeString() + ", " +
+					/*
+					string NewTrade = Time[0].ToShortDateString() + ", " + Time[0].ToShortTimeString() + ", " +
 							Bars.Instrument.MasterInstrument.Name + ", " +
 							Contracts + ", " +
 							Direction + ", " +
@@ -274,7 +284,27 @@ namespace NinjaTrader.NinjaScript.Indicators
 							",  Entry " + Entry +
 							",  Management " + Management +
 							",  Prior Points " + PriorGain;
+					*/
+					/// check for new gain
+					if (PriorGain != gain) {
+						// record this trade profit / loss
+						double ThisTradePoints = gain - PriorGain;
+						double ThisTradeProfit = (ThisTradePoints * Contracts) * PointVal; 
+						string NewTrade = Time[0].ToShortDateString() + ", " + Time[0].ToShortTimeString() + ", " +
+							Bars.Instrument.MasterInstrument.Name + ", " +
+							Contracts + ", " +
+							Direction + ", " +
+							", " + ThisTradePoints + 
+							", " + ThisTradeProfit.ToString("C") + 
+							", " + Area +
+							", " + Qualifier +
+							", " + Entry +
+							", " + Management;
 						Print(NewTrade);
+						// 8/23/2022, 5:01 PM, MES, 5, Long,  Points -0.25,  Profit ($6.25),  Area Up Trend,  Qualifier HH,  Entry Good,  Management Good,  Prior Points 0
+						string header = "Date, Time, Symbol, Contracts, Direction, Point Gain, Profit, Area, Qualifier, Entry, Management, Notes"; 
+						AddHeader(header: header);
+						WriteFile(path: path, newLine: NewTrade, header: false);
 					}
 					
 					PriorGain = gain;
@@ -284,7 +314,74 @@ namespace NinjaTrader.NinjaScript.Indicators
 				 
 			}
 			Draw.TextFixed(this, "MyTextFixed", message, TextPosition.TopLeft);
+			//SetFileName();
+			//AddHeader();
 		}
+		
+		private void SetFileName() {
+			if (Count - 2 == CurrentBar) {
+				string inst = Instrument.FullName;
+				string instOnly = inst.Remove(inst.Length-6);
+				DateTime myDate = DateTime.Today;  // DateTime type
+				string prettyDate = myDate.ToString("M_d_yyyy");
+				string instDate = instOnly + "_" + prettyDate + ".csv";
+				//path += instDate;
+				//Print(instDate);
+				Print(path);
+			}
+		}
+		
+		private void AddHeader(string header) {
+			//if (CurrentBar < 2 ) {  
+				if ( !headerIn ) {
+					SetFileName();
+					//string headerl = "Date, PriorChange, PriorRange, GxRange, GxVol, Gap, 10range, 10change, IBdir";  
+					Print(header);
+					WriteFile(path: path, newLine: header, header: true);
+					headerIn = true;
+				}
+				//return;
+			//}
+		}
+		
+		private void WriteFile(string path, string newLine, bool header)
+        {
+			if ( header ) {
+				ClearFile(path: path);
+				using (var tw = new StreamWriter(path, true))
+	            {
+	                tw.WriteLine(newLine); 
+	                tw.Close();
+	            }
+				return;
+			}
+			
+            using (var tw = new StreamWriter(path, true))
+            {
+                tw.WriteLine(newLine);
+                tw.Close();
+            }
+        }
+		
+		private void ClearFile(string path)
+        {
+            try    
+			{    
+				// Check if file exists with its full path    
+				if (File.Exists(path))    
+				{    
+					// If file found, delete it    
+					File.Delete(path);    
+					Print("File deleted.");    
+				} 
+				else  Print("File not found");    
+			}    
+			catch (IOException ioExp)    
+			{    
+				Print(ioExp.Message);    
+			} 
+			
+        }
 
 		#region Button Logic 
 		
@@ -341,6 +438,8 @@ namespace NinjaTrader.NinjaScript.Indicators
 		
 		#endregion
 		
+		#region Vwap Trend
+		
 		///  Vwap to show VAL, VAH, Up Trend , Down Trend 
 		void SetVwapTrend(bool ShowVwap, bool ShowTrend ) { 
 			
@@ -388,6 +487,9 @@ namespace NinjaTrader.NinjaScript.Indicators
 				if ( ShowTrend ) { Draw.Dot(this, "Down" + CurrentBar, false, 0, Low[0], Brushes.Red); }
 			}
 		}
+		
+		#endregion
+		
 		#region Properties
 		[NinjaScriptProperty]
 		[PropertyEditor("NinjaTrader.Gui.Tools.TimeEditorKey")]
@@ -413,10 +515,19 @@ namespace NinjaTrader.NinjaScript.Indicators
 		{ get; set; }
 		
 		[NinjaScriptProperty]
+		[Display(Name="Journal File Name", Order=4, GroupName="Parameters")]
+		public string JournalFileName
+		{ get; set; }
+		
+		[NinjaScriptProperty]
+		[Display(Name="File Path", Order=5, GroupName="Parameters")]
+		public string path
+		{ get; set; }
+		
+		[NinjaScriptProperty]
 		[TypeConverter(typeof(AccountConverter))]
 		public string AccountNames
 		{get;set;}
-		
 	
 		public class AccountConverter : TypeConverter
 	    {
@@ -448,6 +559,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 		   }
 	    }
 	}
+	
 	#endregion
 
 }
@@ -459,18 +571,18 @@ namespace NinjaTrader.NinjaScript.Indicators
 	public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
 	{
 		private TradeJournal[] cacheTradeJournal;
-		public TradeJournal TradeJournal(DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string accountNames)
+		public TradeJournal TradeJournal(DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string journalFileName, string path, string accountNames)
 		{
-			return TradeJournal(Input, rTHopen, rTHclose, usePoints, contracts, accountNames);
+			return TradeJournal(Input, rTHopen, rTHclose, usePoints, contracts, journalFileName, path, accountNames);
 		}
 
-		public TradeJournal TradeJournal(ISeries<double> input, DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string accountNames)
+		public TradeJournal TradeJournal(ISeries<double> input, DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string journalFileName, string path, string accountNames)
 		{
 			if (cacheTradeJournal != null)
 				for (int idx = 0; idx < cacheTradeJournal.Length; idx++)
-					if (cacheTradeJournal[idx] != null && cacheTradeJournal[idx].RTHopen == rTHopen && cacheTradeJournal[idx].RTHclose == rTHclose && cacheTradeJournal[idx].UsePoints == usePoints && cacheTradeJournal[idx].Contracts == contracts && cacheTradeJournal[idx].AccountNames == accountNames && cacheTradeJournal[idx].EqualsInput(input))
+					if (cacheTradeJournal[idx] != null && cacheTradeJournal[idx].RTHopen == rTHopen && cacheTradeJournal[idx].RTHclose == rTHclose && cacheTradeJournal[idx].UsePoints == usePoints && cacheTradeJournal[idx].Contracts == contracts && cacheTradeJournal[idx].JournalFileName == journalFileName && cacheTradeJournal[idx].path == path && cacheTradeJournal[idx].AccountNames == accountNames && cacheTradeJournal[idx].EqualsInput(input))
 						return cacheTradeJournal[idx];
-			return CacheIndicator<TradeJournal>(new TradeJournal(){ RTHopen = rTHopen, RTHclose = rTHclose, UsePoints = usePoints, Contracts = contracts, AccountNames = accountNames }, input, ref cacheTradeJournal);
+			return CacheIndicator<TradeJournal>(new TradeJournal(){ RTHopen = rTHopen, RTHclose = rTHclose, UsePoints = usePoints, Contracts = contracts, JournalFileName = journalFileName, path = path, AccountNames = accountNames }, input, ref cacheTradeJournal);
 		}
 	}
 }
@@ -479,14 +591,14 @@ namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
 {
 	public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
 	{
-		public Indicators.TradeJournal TradeJournal(DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string accountNames)
+		public Indicators.TradeJournal TradeJournal(DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string journalFileName, string path, string accountNames)
 		{
-			return indicator.TradeJournal(Input, rTHopen, rTHclose, usePoints, contracts, accountNames);
+			return indicator.TradeJournal(Input, rTHopen, rTHclose, usePoints, contracts, journalFileName, path, accountNames);
 		}
 
-		public Indicators.TradeJournal TradeJournal(ISeries<double> input , DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string accountNames)
+		public Indicators.TradeJournal TradeJournal(ISeries<double> input , DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string journalFileName, string path, string accountNames)
 		{
-			return indicator.TradeJournal(input, rTHopen, rTHclose, usePoints, contracts, accountNames);
+			return indicator.TradeJournal(input, rTHopen, rTHclose, usePoints, contracts, journalFileName, path, accountNames);
 		}
 	}
 }
@@ -495,14 +607,14 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
 	public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
 	{
-		public Indicators.TradeJournal TradeJournal(DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string accountNames)
+		public Indicators.TradeJournal TradeJournal(DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string journalFileName, string path, string accountNames)
 		{
-			return indicator.TradeJournal(Input, rTHopen, rTHclose, usePoints, contracts, accountNames);
+			return indicator.TradeJournal(Input, rTHopen, rTHclose, usePoints, contracts, journalFileName, path, accountNames);
 		}
 
-		public Indicators.TradeJournal TradeJournal(ISeries<double> input , DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string accountNames)
+		public Indicators.TradeJournal TradeJournal(ISeries<double> input , DateTime rTHopen, DateTime rTHclose, bool usePoints, int contracts, string journalFileName, string path, string accountNames)
 		{
-			return indicator.TradeJournal(input, rTHopen, rTHclose, usePoints, contracts, accountNames);
+			return indicator.TradeJournal(input, rTHopen, rTHclose, usePoints, contracts, journalFileName, path, accountNames);
 		}
 	}
 }
