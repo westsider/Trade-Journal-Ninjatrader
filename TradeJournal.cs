@@ -32,7 +32,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 		private double Open_D = 0.0;
 		private double Close_D = 0.0;
 		private double TradeJournal_D = 0.0;
-		private string message = "no message";
+		private string message = @"no message";
 		private long startTime = 0;
 		private	long endTime = 0;
 		private int startBar = 0;
@@ -229,7 +229,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 				gain = 0.0;
 				Open_D = Open[0];
 				TradeJournal_D = Open_D - Close_D;
-				message =  Time[0].ToShortDateString() + " "  + Time[0].ToShortTimeString() + "   OpenContracts " + Contracts.ToString(); 
+				message =  @Time[0].ToShortDateString() + " "  + Time[0].ToShortTimeString() + "   OpenContracts " + Contracts.ToString(); 
 				//Print(message); 
 				
 			}
@@ -237,9 +237,9 @@ namespace NinjaTrader.NinjaScript.Indicators
 			/// pre marketreset profit
 			if (ToTime(Time[0]) < startTime ) { 
 				TradeJournal_D = Close[0] - Close_D;
-				message =  Time[0].ToShortDateString() + " \t Contracts: " + Contracts.ToString();
+				//message =  Time[0].ToShortDateString() + " \t Contracts: " + Contracts.ToString();
 				//Print(message);
-				message += "  Gain: $" + gain.ToString("N0");
+				message += @"  Gain: $" + gain.ToString("N0");
 				// set gain when we first load to fix bank row on load
 				gain =  account.Get(AccountItem.GrossRealizedProfitLoss, Currency.UsDollar);
 				//Print(Time[0] + " setting gain" + gain.ToString());
@@ -248,7 +248,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 			
 			/// RTH ready peformance results
 			if ( ToTime(Time[0]) > startTime ) { 
-				message =  Time[0].ToShortDateString() + "  " + name;
+				message =  Time[0].ToShortDateString() + "  " + name  +  "\n .";
 				if ( UsePoints ) {
 					
 					/// update gain
@@ -256,8 +256,12 @@ namespace NinjaTrader.NinjaScript.Indicators
 					gain =  account.Get(AccountItem.GrossRealizedProfitLoss, Currency.UsDollar);
 					double PointVal = Instrument.MasterInstrument.PointValue;
 					gain = gain / ( PointVal * Contracts );
-					message +=  " \tContracts: " + Contracts.ToString() + "  \tGain: " + gain.ToString("N2") + " pts ";
 					
+					string path2 = @"\\mypc\shared\project";
+					string CurrentTime = @Time[0].ToShortDateString();
+					string Ct = Contracts.ToString();
+					string TheGain = gain.ToString("N2");
+					message = CurrentTime  + "  " + @name + @"   Contracts: " + @Ct + "  Gain: " + @TheGain + @" pts " +  "\n .";
 					/// get trade infro from Executions
 					string Direction = "NA";
 					int Quantity = 0;
@@ -296,11 +300,11 @@ namespace NinjaTrader.NinjaScript.Indicators
 					
 					PriorGain = gain;
 				} else {
-					message += "  Gain: $" + gain.ToString("N0") + "  DD: $" + intradayLoss.ToString("N0");
+					message += "  Gain: $" + gain.ToString("N0") + "  DD: $" + intradayLoss.ToString("N0") + "/n /n 123456 ... ";
 				}
-				 
+				Draw.TextFixed(this, "MyTextFixed", message, TextPosition.BottomLeft);
 			}
-			Draw.TextFixed(this, "MyTextFixed", message, TextPosition.TopLeft);
+			
 		}
 		
 		#region Save CSV 
