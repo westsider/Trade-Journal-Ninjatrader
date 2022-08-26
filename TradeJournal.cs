@@ -66,15 +66,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 		
 		/// CSV
 		private bool 	headerIn = false;
-		private bool	ThisFIleExists = false;
-		//private string path = "";
-		/// MARK: - TODO - 
-		/// [ X ] Add Vwap to show VAL, VAH, Up Trend , Down Trend 
-		/// [ X ] Add buttons Qualifier HH LL, Entry Good Bad, Management Good Bad
-		/// [ X ] Add Save CSV
-		/// [ X ] vwap debugging
-		/// [   ] fix adding row when loads. 
-		/// [   ] fix deleting existing file
+		private bool	ThisFIleExists = false; 
 		
 		#region Set Up 
 		
@@ -286,18 +278,18 @@ namespace NinjaTrader.NinjaScript.Indicators
 						// record this trade profit / loss
 						double ThisTradePoints = gain - PriorGain;
 						double ThisTradeProfit = (ThisTradePoints * Contracts) * PointVal;  
-						string NewTrade = Time[0].ToShortDateString() + ", " + Time[0].ToShortTimeString() + ", " +
+						string NewTrade = Time[0].ToShortDateString() + ", " + Time[0].ToShortTimeString() + ", " + name + ", " +
 							Bars.Instrument.MasterInstrument.Name + ", " +
 							Contracts + ", " +
 							Direction + 
-							", " + ThisTradePoints +  				// Pooint gain is not working
+							", " + ThisTradePoints +  				
 							", " + ThisTradeProfit.ToString("C") + 
 							", " + Area +
 							", " + Qualifier +
 							", " + Entry +
 							", " + Management;
 						Print("New Trade " + NewTrade); 
-						string header = "Date, Time, Symbol, Contracts, Direction, Point Gain, Profit, Area, Qualifier, Entry, Management, Notes"; 
+						string header = "Date, Time, Account, Symbol, Contracts, Direction, Point Gain, Profit, Area, Qualifier, Entry, Management, Notes"; 
 						AddHeader(header: header);
 						WriteFile(path: path, newLine: NewTrade, header: false);
 					}
@@ -309,10 +301,9 @@ namespace NinjaTrader.NinjaScript.Indicators
 				 
 			}
 			Draw.TextFixed(this, "MyTextFixed", message, TextPosition.TopLeft);
-			//SetFileName();
-			//AddHeader();
-			//CheckFIleExists();
 		}
+		
+		#region Save CSV 
 		
 		private void CheckFIleExists() {
 			if (File.Exists(path)) {
@@ -335,17 +326,13 @@ namespace NinjaTrader.NinjaScript.Indicators
 		}
 		
 		private void AddHeader(string header) {
-			CheckFIleExists();
-			//if (CurrentBar < 2 ) {  
-				if ( !headerIn && !ThisFIleExists ) {
-					SetFileName();
-					//string headerl = "Date, PriorChange, PriorRange, GxRange, GxVol, Gap, 10range, 10change, IBdir";  
-					Print(header);
-					WriteFile(path: path, newLine: header, header: true);
-					headerIn = true;
-				}
-				//return;
-			//}
+			CheckFIleExists(); 
+			if ( !headerIn && !ThisFIleExists ) {
+				SetFileName();  
+				Print(header);
+				WriteFile(path: path, newLine: header, header: true);
+				headerIn = true;
+			} 
 		}
 		
 		private void WriteFile(string path, string newLine, bool header)
@@ -387,6 +374,8 @@ namespace NinjaTrader.NinjaScript.Indicators
 			
         }
 
+		#endregion
+		
 		#region Button Logic 
 		
 		private void OnMyButtonClick(object sender, RoutedEventArgs rea)
