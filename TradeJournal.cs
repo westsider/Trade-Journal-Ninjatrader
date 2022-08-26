@@ -239,6 +239,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 				TradeJournal_D = Open_D - Close_D;
 				message =  Time[0].ToShortDateString() + " "  + Time[0].ToShortTimeString() + "   OpenContracts " + Contracts.ToString(); 
 				//Print(message); 
+				
 			}
 			
 			/// pre marketreset profit
@@ -247,6 +248,9 @@ namespace NinjaTrader.NinjaScript.Indicators
 				message =  Time[0].ToShortDateString() + " \t Contracts: " + Contracts.ToString();
 				//Print(message);
 				message += "  Gain: $" + gain.ToString("N0");
+				// set gain when we first load to fix bank row on load
+				gain =  account.Get(AccountItem.GrossRealizedProfitLoss, Currency.UsDollar);
+				//Print(Time[0] + " setting gain" + gain.ToString());
 			}
 
 			
@@ -276,36 +280,23 @@ namespace NinjaTrader.NinjaScript.Indicators
 								  } 
 							  }  
 			        } 
-					/*
-					string NewTrade = Time[0].ToShortDateString() + ", " + Time[0].ToShortTimeString() + ", " +
-							Bars.Instrument.MasterInstrument.Name + ", " +
-							Contracts + ", " +
-							Direction + ", " +
-							" Points " + ThisTradePoints + 
-							",  Profit " + ThisTradeProfit.ToString("C") + 
-							
-							",  Area " + Area +
-							",  Qualifier " + Qualifier +
-							",  Entry " + Entry +
-							",  Management " + Management +
-							",  Prior Points " + PriorGain;
-					*/
+					
 					/// check for new gain
-					if (PriorGain != gain) {
+					if (PriorGain != gain && Count - 2 == CurrentBar ) {
 						// record this trade profit / loss
 						double ThisTradePoints = gain - PriorGain;
-						double ThisTradeProfit = (ThisTradePoints * Contracts) * PointVal; 
+						double ThisTradeProfit = (ThisTradePoints * Contracts) * PointVal;  
 						string NewTrade = Time[0].ToShortDateString() + ", " + Time[0].ToShortTimeString() + ", " +
 							Bars.Instrument.MasterInstrument.Name + ", " +
 							Contracts + ", " +
-							Direction + ", " +
-							", " + ThisTradePoints + 
+							Direction + 
+							", " + ThisTradePoints +  				// Pooint gain is not working
 							", " + ThisTradeProfit.ToString("C") + 
 							", " + Area +
 							", " + Qualifier +
 							", " + Entry +
 							", " + Management;
-						Print(NewTrade); 
+						Print("New Trade " + NewTrade); 
 						string header = "Date, Time, Symbol, Contracts, Direction, Point Gain, Profit, Area, Qualifier, Entry, Management, Notes"; 
 						AddHeader(header: header);
 						WriteFile(path: path, newLine: NewTrade, header: false);
@@ -457,15 +448,12 @@ namespace NinjaTrader.NinjaScript.Indicators
 		void SetVwapTrend(bool ShowVwap, bool ShowTrend ) { 
 			
 			if (BarsInProgress == 1 ) {  return; }
-			Print("show vwap");
 			double MyVwapU05 = amaCurrentDayVWAP1.UpperBand1[0];
 			double MyVwapU1 = amaCurrentDayVWAP1.UpperBand2[0];
 			double MyVwapU15 = amaCurrentDayVWAP1.UpperBand3[0];
 			
 			if ( ShowVwap ) {
-				Print("show vwap");
 				Draw.Dot(this, "MyVwapU1", false, 0, MyVwapU05, Brushes.Red);
-				Print("show vwap");
 				Draw.Dot(this, "MyVwapU2", false, 0, MyVwapU1, Brushes.White);
 				Draw.Dot(this, "MyVwapU3", false, 0, MyVwapU15, Brushes.Blue);
 			}
